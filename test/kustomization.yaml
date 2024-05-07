@@ -1,0 +1,11 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  # Get all cluster specific vars via ConfigMap
+  - cluster-vars-cm.yaml
+  - secret.yaml
+  # This ConfigMap is mounted inside the argocd-repo-server container during cluster creation
+  - /app/config/test/dynamic-vars-file-cm-test.yaml
+  # File created on the repo-server container by the helm template command
+  - helm-generated.yaml

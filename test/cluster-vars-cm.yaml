@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/name: cluster-vars
+    app.kubernetes.io/part-of: argocd
+  name: cluster-vars
+  namespace: argocd
+data:
+  __CLUSTER_TYPE__                                : "xxx"
+  __CLUSTER_ENV__                                 : "xxx"
+  __CAPLKE_CPC_NAME_VALUE__                       : "xxx"

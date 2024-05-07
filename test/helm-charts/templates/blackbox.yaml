@@ -1,0 +1,119 @@
+---
+# Source: prometheus-blackbox-exporter/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: blackbox-prometheus-blackbox-exporter
+  namespace: monitoring
+  labels:
+    helm.sh/chart: prometheus-blackbox-exporter-8.12.0
+    app.kubernetes.io/name: prometheus-blackbox-exporter
+    app.kubernetes.io/instance: blackbox
+    app.kubernetes.io/version: "v0.24.0"
+    app.kubernetes.io/managed-by: Helm
+---
+# Source: prometheus-blackbox-exporter/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: blackbox-prometheus-blackbox-exporter
+  namespace: monitoring
+  labels:
+    helm.sh/chart: prometheus-blackbox-exporter-8.12.0
+    app.kubernetes.io/name: prometheus-blackbox-exporter
+    app.kubernetes.io/instance: blackbox
+    app.kubernetes.io/version: "v0.24.0"
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    prometheus.io/port: "9115"
+    prometheus.io/scrape: "true"
+spec:
+  type: ClusterIP
+  ports:
+    - port: 9115
+      targetPort: http
+      protocol: TCP
+      name: http
+    
+  selector:
+    app.kubernetes.io/name: prometheus-blackbox-exporter
+    app.kubernetes.io/instance: blackbox
+---
+# Source: prometheus-blackbox-exporter/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: blackbox-prometheus-blackbox-exporter
+  namespace: monitoring
+  labels:
+    helm.sh/chart: prometheus-blackbox-exporter-8.12.0
+    app.kubernetes.io/name: prometheus-blackbox-exporter
+    app.kubernetes.io/instance: blackbox
+    app.kubernetes.io/version: "v0.24.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: prometheus-blackbox-exporter
+      app.kubernetes.io/instance: blackbox
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: prometheus-blackbox-exporter
+        app.kubernetes.io/instance: blackbox
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/blackbox-config.yaml") . | sha256sum }}
+    spec:
+      automountServiceAccountToken: false
+      serviceAccountName: blackbox-prometheus-blackbox-exporter
+      restartPolicy: Always
+      
+      containers:
+      
+      - name: blackbox-exporter
+        image: quay.io/prometheus/blackbox-exporter:v0.24.0
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsGroup: 1000
+          runAsNonRoot: true
+          runAsUser: 1000
+        env:
+        args:
+        - "--config.file=/config/blackbox.yaml"
+        ports:
+        - containerPort: 9115
+          name: http
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /-/healthy
+            port: http
+        readinessProbe:
+          httpGet:
+            path: /-/healthy
+            port: http
+        volumeMounts:
+        - mountPath: /config
+          name: config
+      hostNetwork: false
+      tolerations:
+        - key: "node.kubernetes.io/unschedulable"
+          operator: "Exists"
+          effect: "NoSchedule"
+      nodeSelector:
+        lke.linode.com/role: metrics
+      volumes:
+      - name: config
+        configMap:
+          name: blackbox-prometheus-blackbox-exporter
