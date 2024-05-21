@@ -111,8 +111,6 @@ spec:
         - key: "node.kubernetes.io/unschedulable"
           operator: "Exists"
           effect: "NoSchedule"
-      nodeSelector:
-        lke.linode.com/role: metrics
       volumes:
       - name: config
         configMap:
